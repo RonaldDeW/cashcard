@@ -20,7 +20,6 @@ class CashCardApplicationTests {
 	@Autowired
 	TestRestTemplate restTemplate;
 
-
 	@Test
 	void contextLoads() {
 	}
