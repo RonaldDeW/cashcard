@@ -1,5 +1,10 @@
 package example.cashcard;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.HttpCookie;
+import java.net.URI;
+
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
@@ -7,12 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
-
-import java.net.HttpCookie;
-import java.net.URI;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 //@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -25,6 +29,7 @@ class CashCardApplicationTests {
 	void contextLoads() {
 	}
 	@Test
+	@DirtiesContext
 	void shouldCreateANewCashCard() {
 		//HttpHeaders headers = createCsrfHeaders();
 		CashCard newCashCard = new CashCard(null, 250.00, "sarah1");
@@ -35,12 +40,14 @@ class CashCardApplicationTests {
 		assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
 		URI locationOfNewCard = createResponse.getHeaders().getLocation();
-		ResponseEntity<String> getResponse = restTemplate.getForEntity(locationOfNewCard, String.class);
+		ResponseEntity<String> getResponse = restTemplate
+				.withBasicAuth("sarah1", "abc123")
+				.getForEntity(locationOfNewCard, String.class);
 		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
 
 		DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
-		Number id = documentContext.read("$.id");
-		Double amount = documentContext.read("S.amount");
+		Number id = documentContext.read("id");
+		Double amount = documentContext.read("amount");
 
 		assertThat(id).isNotNull();
 		assertThat(amount).isEqualTo(250.00);
@@ -126,6 +133,8 @@ class CashCardApplicationTests {
 				.withBasicAuth("sarah1", "abc123")
 				.getForEntity("/cashcards", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+		System.out.println(response.getBody());
 
 		DocumentContext documentContext = JsonPath.parse(response.getBody());
 		JSONArray page = documentContext.read("$[*]");
